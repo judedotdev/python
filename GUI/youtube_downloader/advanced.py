@@ -2,6 +2,23 @@ import tkinter
 import customtkinter as ctk
 import yt_dlp
 import threading
+import time
+from googleapiclient.discovery import build
+
+# YouTube Data API setup
+YOUTUBE_API_KEY = "YOUR_API_KEY_HERE"
+youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+
+
+def get_video_metadata(video_id):
+    request = youtube.videos().list(part="snippet,contentDetails", id=video_id)
+    response = request.execute()
+    if "items" in response and len(response["items"]) > 0:
+        video = response["items"][0]
+        title = video["snippet"]["title"]
+        description = video["snippet"]["description"]
+        return title, description
+    return None, None
 
 
 def progress_hook(d):
@@ -20,14 +37,19 @@ def progress_hook(d):
 def startDownload():
     try:
         ytLink = link.get()
+        video_id = ytLink.split("v=")[-1]
+        title, description = get_video_metadata(video_id)
+
+        if title:
+            status_label.configure(text=f"Downloading '{title}'...")
+
         ydl_opts = {
             "format": "best",
             "progress_hooks": [progress_hook],
             "headers": {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Accept-Language": "en-US,en;q=0.9",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
             },
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
